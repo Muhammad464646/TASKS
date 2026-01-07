@@ -4,7 +4,7 @@ from .models import Category, Task
 class CategorySerializers(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ('title',)
+        fields = ('id','title',)
 
 class TaskSerializers(serializers.ModelSerializer):
     class Meta:

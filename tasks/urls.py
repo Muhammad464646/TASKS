@@ -1,5 +1,6 @@
 from django.urls import path
-from .views import (get_create_category_api_view, edit_delete_category_api_view,
+from .views import (
+get_create_category_api_view, edit_delete_category_api_view,
 get_create_task_api_view, edit_delete_task_api_view)
 
 urlpatterns = [
