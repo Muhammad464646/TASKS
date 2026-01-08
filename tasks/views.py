@@ -1,84 +1,61 @@
-from http.client import responses
-
-from rest_framework import serializers, status
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Category, Task
 from .serialazers import CategorySerializers, TaskSerializers
-
-
-@api_view(['GET', 'POST'])
-def get_create_category_api_view(request):
-    if request.method  == 'POST':
-        serializer = CategorySerializers(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    elif request.method == 'GET':
-        categories = Category.objects.all()
-        serializer = CategorySerializers(categories, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    return Response({'errors': "Something was wrong"}, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['PUT', 'PATCH', 'DELETE'])
-def edit_delete_category_api_view(request, pk):
-    category = Category.objects.filter(id=pk).first()
-    if not category:
-        return Response('Category does not exists', status=status.HTTP_400_BAD_REQUEST)
-    if request.method == 'PUT':
-        serializer = CategorySerializers(category, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    elif request.method == 'PATCH':
-        serializer = CategorySerializers(category, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    elif request.method == 'DELETE':
-        category.delete()
-        return Response({'message': "Category deleted successfully"},status=status.HTTP_204_NO_CONTENT)
-    return Response({'errors': "Something was wrong"}, status=status.HTTP_400_BAD_REQUEST)
+from django.contrib.auth.models import User
+from rest_framework import generics, permissions, status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout
+from rest_framework.serializers import ModelSerializer
 
 
 
-@api_view(['GET', 'POST'])
-def get_create_task_api_view(request):
-    if request.method == 'POST':
-        serializer = TaskSerializers(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    elif request.method == 'GET':
-        tasks = Task.objects.all()
-        serializer = TaskSerializers(tasks, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    return Response({'errors': "Something was wrong"}, status=status.HTTP_400_BAD_REQUEST)
+class CategoryViewSet(ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializers
+    permission_classes = [AllowAny]
 
-@api_view(['PUT', 'PATCH', 'DELETE'])
-def edit_delete_task_api_view(request, pk):
-    task = Task.objects.filter(id=pk)
-    if not task:
-        return Response("Task does not exists", status=status.HTTP_400_BAD_REQUEST)
-    if request.method == 'PUT':
-        serializer = TaskSerializers(task, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    elif request.method == 'PATCH':
-        serializer = TaskSerializers(task, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    elif request.method == 'DELETE':
-        task.delete()
-        return Response("Task deleted successfully", status=status.HTTP_204_NO_CONTENT)
-    return Response({'errors': "Something was wrong"}, status=status.HTTP_400_BAD_REQUEST)
 
+class TaskViewSet(ModelViewSet):
+    queryset = Task.objects.all()
+    serializer_class = TaskSerializers
+    permission_classes = [AllowAny]
+
+
+
+
+class RegisterSerializer(ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'password')
+        extra_kwargs = {'password': {'write_only': True}}
+
+    def create(self, validated_data):
+        user = User.objects.create_user(**validated_data)
+        return user
+
+class RegisterAPIView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = RegisterSerializer
+    permission_classes = [permissions.AllowAny]
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def login_api_view(request):
+    username = request.data.get('username')
+    password = request.data.get('password')
+    if not username or not password:
+        return Response({'error': 'Both fields are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = authenticate(request, username=username, password=password)
+    if user:
+        login(request, user)
+        return Response({'message': 'Logged in successfully'})
+    return Response({'error': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+def logout_api_view(request):
+    logout(request)
+    return Response({'message': 'Logged out successfully'})

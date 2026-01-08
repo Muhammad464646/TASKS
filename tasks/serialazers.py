@@ -1,6 +1,10 @@
 from rest_framework import serializers
 from .models import Category, Task
 
+
+
+class RegisterSerializers(serializers.ModelSerializer):
+    pass
 class CategorySerializers(serializers.ModelSerializer):
     class Meta:
         model = Category
